@@ -121,6 +121,29 @@ async def main() -> int:
             ok &= check(r.status == 200 and "error" not in res, f"tool {tool}")
             print("   ", json.dumps(res, ensure_ascii=False)[:300])
 
+        # MCP endpoint (Streamable HTTP, JSON responses)
+        mcp = f"{base}/agent/mcp"
+        init = {"jsonrpc": "2.0", "id": 1, "method": "initialize",
+                "params": {"protocolVersion": "2025-06-18", "capabilities": {},
+                           "clientInfo": {"name": "smoke", "version": "0"}}}
+        async with http.post(mcp, json=init) as r:
+            res = await r.json()
+            sid = r.headers.get("Mcp-Session-Id", "")
+        ok &= check(res.get("result", {}).get("serverInfo", {}).get("name") == "jamovi-agent" and sid,
+                    "mcp initialize")
+        h = {"Mcp-Session-Id": sid}
+        async with http.post(mcp, json={"jsonrpc": "2.0", "method": "notifications/initialized"},
+                             headers=h) as r:
+            ok &= check(r.status == 202, "mcp initialized notification -> 202")
+        async with http.post(mcp, json={"jsonrpc": "2.0", "id": 2, "method": "tools/list"}, headers=h) as r:
+            names = [t["name"] for t in (await r.json())["result"]["tools"]]
+        ok &= check("create_analysis" in names and "search_docs" in names, f"mcp tools/list ({len(names)})")
+        async with http.post(mcp, json={"jsonrpc": "2.0", "id": 3, "method": "tools/call", "params": {
+                "name": "search_analyses", "arguments": {"query": "Mann-Whitney"}}}, headers=h) as r:
+            res = (await r.json())["result"]
+        ok &= check(not res["isError"] and "ttestIS" in res["content"][0]["text"],
+                    "mcp tools/call search_analyses finds Mann-Whitney via ttestIS")
+
         if args.chat:
             async with http.post(f"{base}/agent/chat", json={"message": args.chat}) as r:
                 async for line in r.content:
