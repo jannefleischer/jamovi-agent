@@ -25,7 +25,7 @@ from . import __version__
 log = logging.getLogger(__name__)
 
 PROTOCOL_VERSIONS = ("2025-06-18", "2025-03-26", "2024-11-05")
-SERVER_INFO = {"name": "jamovi-agent", "title": "jamovi (ILS)", "version": __version__}
+SERVER_INFO = {"name": "jamovi-agent", "title": "jamovi-assistant", "version": __version__}
 INSTRUCTIONS = (
     "Tools to work in the user's open jamovi window: inspect the data set, find and run "
     "analyses (they appear in the user's results panel) and read results. Call "

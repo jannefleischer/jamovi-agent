@@ -1,0 +1,103 @@
+/* Chat widget of the jamovi agent (both UIs). Colours follow jamovi's blue. */
+.jamovi-assistant {
+    display: flex;
+    flex-direction: column;
+    font-family: inherit;
+    font-size: 13px;
+    color: #333;
+    min-height: 0;
+}
+.jamovi-assistant .jamovi-assistant-title {
+    font-weight: bold;
+    color: #3e6da9;
+    padding: 6px 8px;
+}
+.jamovi-assistant .jamovi-assistant-log {
+    flex: 1 1 auto;
+    overflow-y: auto;
+    padding: 6px 8px;
+    min-height: 120px;
+}
+.jamovi-assistant .jamovi-assistant-msg {
+    margin: 6px 0;
+    padding: 6px 9px;
+    border-radius: 6px;
+    line-height: 1.4;
+    overflow-x: auto;
+}
+.jamovi-assistant .jamovi-assistant-user {
+    background: #e3ecf7;
+    margin-left: 20%;
+    white-space: pre-wrap;
+}
+.jamovi-assistant .jamovi-bot { background: #f5f5f5; margin-right: 5%; }
+.jamovi-assistant .jamovi-assistant-status,
+.jamovi-assistant .jamovi-assistant-hint { color: #777; font-style: italic; background: none; }
+.jamovi-assistant .jamovi-assistant-error { color: #a00; background: #fbeaea; }
+.jamovi-assistant .jamovi-assistant-msg p { margin: 0 0 6px 0; }
+.jamovi-assistant .jamovi-assistant-msg table { border-collapse: collapse; margin: 6px 0; }
+.jamovi-assistant .jamovi-assistant-msg th,
+.jamovi-assistant .jamovi-assistant-msg td { border-bottom: 1px solid #ddd; padding: 2px 8px; text-align: left; }
+.jamovi-assistant .jamovi-assistant-msg pre { background: #eee; padding: 6px; white-space: pre-wrap; }
+.jamovi-assistant .jamovi-assistant-msg code { background: #eee; padding: 0 3px; border-radius: 3px; }
+.jamovi-assistant .jamovi-assistant-msg ul,
+.jamovi-assistant .jamovi-assistant-msg ol { margin: 4px 0 6px 18px; padding: 0; }
+.jamovi-assistant .jamovi-assistant-form {
+    display: flex;
+    gap: 6px;
+    padding: 6px 8px;
+    border-top: 1px solid #ddd;
+}
+.jamovi-assistant .jamovi-assistant-input {
+    flex: 1 1 auto;
+    resize: vertical;
+    font: inherit;
+    padding: 4px 6px;
+    border: 1px solid #bbb;
+    border-radius: 4px;
+}
+.jamovi-assistant button {
+    font: inherit;
+    border: 1px solid #3e6da9;
+    background: #3e6da9;
+    color: white;
+    border-radius: 4px;
+    padding: 0 10px;
+    cursor: pointer;
+}
+.jamovi-assistant button.jamovi-assistant-reset { background: white; color: #3e6da9; }
+.jamovi-assistant button:disabled { opacity: 0.5; cursor: default; }
+
+/* sidebar variant */
+#jamovi-assistant-sidebar {
+    position: fixed;
+    top: 0;
+    right: 0;
+    bottom: 0;
+    width: 380px;
+    background: white;
+    border-left: 1px solid #ccc;
+    box-shadow: -2px 0 8px rgba(0, 0, 0, 0.15);
+    z-index: 1000;
+    display: none;
+}
+#jamovi-assistant-sidebar.open { display: flex; }
+#jamovi-assistant-sidebar .jamovi-assistant { flex: 1 1 auto; height: 100%; }
+#jamovi-assistant-toggle {
+    position: fixed;
+    right: 12px;
+    bottom: 12px;
+    z-index: 1001;
+    border: none;
+    border-radius: 18px;
+    background: #3e6da9;
+    color: white;
+    padding: 8px 14px;
+    font-size: 13px;
+    cursor: pointer;
+    box-shadow: 0 1px 4px rgba(0, 0, 0, 0.3);
+}
+#jamovi-assistant-sidebar.open + #jamovi-assistant-toggle { right: 392px; }
+
+/* module variant: fixed height inside the results */
+.jamovi-assistant-module .jamovi-assistant { height: 460px; border: 1px solid #ddd; border-radius: 6px; }

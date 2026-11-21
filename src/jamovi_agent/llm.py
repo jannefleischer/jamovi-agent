@@ -26,13 +26,14 @@ class LLMConfig:
 
     @classmethod
     def from_env(cls) -> "LLMConfig":
-        # LiteLLM statistics take the application from the first word of the User-Agent
-        headers = {"User-Agent": os.environ.get("JAMOVI_AGENT_USER_AGENT",
-                                                "jamovi-Agent (ILS JupyterHub)")}
-        user = os.environ.get("ILS_LLM_USER", "").strip()
+        # usage statistics (e.g. LiteLLM) take the application from the User-Agent
+        headers = {"User-Agent": os.environ.get("JAMOVI_AGENT_USER_AGENT", "jamovi-assistant")}
+        # who is asking, for per-user accounting at the endpoint
+        # (ILS_LLM_USER: legacy name used by the JupyterHub stack this was built for)
+        user = (os.environ.get("JAMOVI_AGENT_LLM_USER") or os.environ.get("ILS_LLM_USER", "")).strip()
         if user:
-            # LiteLLM usage accounting per user (same header as Open WebUI)
-            headers["X-OpenWebUI-User-Email"] = user
+            header = os.environ.get("JAMOVI_AGENT_USER_HEADER", "X-OpenWebUI-User-Email")
+            headers[header] = user
         return cls(
             base_url=os.environ.get("OPENAI_BASE_URL", "").rstrip("/"),
             api_key=os.environ.get("OPENAI_API_KEY", ""),

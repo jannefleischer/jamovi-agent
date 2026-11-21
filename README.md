@@ -3,10 +3,10 @@
 An LLM agent that works inside a running jamovi 28.x server: it inspects the
 open data set, creates and runs analyses that show up live in the user's
 browser, and interprets the results. It talks to any OpenAI-compatible chat
-completions endpoint (at ILS: LiteLLM).
+completions endpoint (e.g. LiteLLM, vLLM, Ollama, OpenAI).
 
-Built for the ILS JupyterHub stack (`../Dockerfile.jamovi`), but it has no
-dependency on JupyterHub.
+Developed for running jamovi behind JupyterHub, but it has no dependency on
+JupyterHub.
 
 ## How it hooks into jamovi
 
@@ -69,10 +69,11 @@ All paths are relative to the jamovi root (behind JupyterHub:
 | `JAMOVI_AGENT_MAX_STEPS` | `12` | tool calls per user message |
 | `JAMOVI_AGENT_TIMEOUT` | `300` | seconds per user message |
 | `JAMOVI_AGENT_ALLOW_RAW_DATA` | `false` | allow `get_data` to return raw rows |
-| `ILS_LLM_USER` | – | sent as `X-OpenWebUI-User-Email` for usage accounting |
+| `JAMOVI_AGENT_LLM_USER` | – | user name/e-mail sent to the endpoint for usage accounting (fallback: `ILS_LLM_USER`) |
+| `JAMOVI_AGENT_USER_HEADER` | `X-OpenWebUI-User-Email` | header that carries that user |
 | `JAMOVI_AGENT_DOCS` | `/opt/jamovi-agent/docs` | documentation directory (Markdown) |
 | `JAMOVI_AGENT_PROMPT_FILE` | – | system prompt file; default `<docs>/system-prompt.md`, then built-in |
-| `JAMOVI_AGENT_USER_AGENT` | `jamovi-Agent (ILS JupyterHub)` | User-Agent sent to the endpoint |
+| `JAMOVI_AGENT_USER_AGENT` | `jamovi-assistant` | User-Agent sent to the endpoint |
 
 ## Documentation and system prompt
 

@@ -73,7 +73,7 @@ def make_docs_dir():
     with open(os.path.join(d, "statistik", "mann-whitney.md"), "w", encoding="utf-8") as f:
         f.write(STATS)
     with open(os.path.join(d, "system-prompt.md"), "w", encoding="utf-8") as f:
-        f.write("ILS prompt for jamovi {{jamovi_version}}.\nModules: {{modules}}\n{{docs_index}}")
+        f.write("Custom prompt for jamovi {{jamovi_version}}.\nModules: {{modules}}\n{{docs_index}}")
     with open(os.path.join(d, "README.md"), "w", encoding="utf-8") as f:
         f.write("# not indexed\n")
     return d
@@ -142,7 +142,7 @@ class KnowledgeTests(unittest.TestCase):
 
     def test_prompt_from_docs_dir(self):
         p = self.k.system_prompt
-        self.assertTrue(p.startswith("ILS prompt for jamovi"))
+        self.assertTrue(p.startswith("Custom prompt for jamovi"))
         self.assertIn("Modules: jmv", p)
         self.assertIn("handbook: jamovi Handbuch – Filter", p)
         self.assertIn("descriptions of 1 installed analyses", p)

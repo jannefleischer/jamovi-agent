@@ -205,7 +205,7 @@ class Toolbox:
                   self.update_analysis, writes=True)
         if self.knowledge is not None:
             self._add("search_docs",
-                      "Search the local documentation (jamovi manual, statistics texts, ILS notes) "
+                      "Search the local documentation (jamovi manual, statistics texts, local notes) "
                       "and the descriptions of all installed analyses. Use for questions about "
                       "methods, assumptions, interpretation or how to do something in jamovi.",
                       {"type": "object", "properties": {
