@@ -88,8 +88,11 @@ by the agent at `agent/static/`, and the same API (`history`, `chat` as SSE,
 - **The assistant analysis is not an analysis for the agent:** `ns ==
   "jamoviassistant"` is excluded from the catalogue and from
   `list_session_analyses`.
-- **CSP:** `connect-src 'self'`, frames are `allow-scripts allow-same-origin`.
-  All UI requests go to the agent routes in the same origin; no external URLs.
+- **CSP and sandbox:** `connect-src 'self'`; the results frame is sandboxed with
+  `allow-scripts allow-same-origin` only. All UI requests go to the agent routes
+  in the same origin (no external URLs), and **no `<form>`**: without
+  `allow-forms` the browser blocks submission and the `submit` event never fires.
+  Use buttons with click handlers.
 - **Paths behind a prefix:** jamovi runs under `/user/<name>/jamovi/…`. Never
   use root-absolute URLs (`/agent/…`); resolve relative to the page
   (`new URL('../agent/', location.href)`). The stack patches jamovi's own client
