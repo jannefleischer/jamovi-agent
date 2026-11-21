@@ -1,7 +1,7 @@
 Package: jamoviassistant
 Type: Package
 Title: Chat with an LLM Assistant that Works in the Open jamovi Window
-Version: 0.1.0
+Version: 0.1.1
 Author: jamovi-assistant contributors
 Maintainer: jamovi-assistant contributors <noreply@example.org>
 Description: The results panel of this analysis hosts a chat with the

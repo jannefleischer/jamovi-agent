@@ -44,6 +44,6 @@ rm -rf "$WORK/module" && cp -r module/jamoviassistant "$WORK/module"
 cp "$WORK"/module/jamoviassistant_*.jmo dist/
 
 tar -czf "dist/jamovi-agent-$VERSION.tar.gz" --transform "s#^#jamovi-agent-$VERSION/#" \
-  src/jamovi_agent shim/extras.py LICENSE LICENSE.md README.md
+  src/jamovi_agent shim/extras.py LICENSE LICENSE-GPL-2.0 LICENSE.md README.md
 (cd dist && sha256sum * > SHA256SUMS)
 ls -la dist
