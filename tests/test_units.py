@@ -75,6 +75,33 @@ class ResultsTests(unittest.TestCase):
         self.assertIn("[plot: Plot]", md)
         self.assertIn("> Few cases", md)
 
+    def test_swapped_table(self):
+        table = SimpleNamespace(swapRowsColumns=True, notes=[], columns=[
+            column("name", [cell(s="len")], title=""),
+            column("n", [cell(i=60)], title="N"),
+            column("mean", [cell(d=18.8133)], title="Mean"),
+        ])
+        md = results.table_to_markdown(table)
+        self.assertIn("| name | len |", md)
+        self.assertIn("| N | 60 |", md)
+        self.assertIn("| Mean | 18.813 |", md)
+
+    def test_folded_table(self):
+        table = SimpleNamespace(notes=[], columns=[
+            column("stat[n]", [cell(s="N")], title=""),
+            column("len[n]", [cell(i=60)], title="len"),
+            column("stat[mean]", [cell(s="Mean")], title=""),
+            column("len[mean]", [cell(d=18.8133)], title="len"),
+        ])
+        md = results.table_to_markdown(table)
+        self.assertIn("| stat[n] | len |", md)
+        self.assertIn("| N | 60 |", md)
+        self.assertIn("| Mean | 18.813 |", md)
+
+    def test_syntax_block_skipped(self):
+        self.assertEqual(results.element_to_markdown(
+            elem("preformatted", "", name="syntax", preformatted="jmv::x()")), "")
+
     def test_max_rows(self):
         cells = [cell(i=i) for i in range(results.MAX_ROWS + 5)]
         md = results.table_to_markdown(SimpleNamespace(columns=[column("x", cells)], notes=[]))

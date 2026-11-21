@@ -52,24 +52,53 @@ def _visible(elem) -> bool:
     return int(getattr(elem, "visible", 0)) not in (1, 3)
 
 
+_FOLD = re.compile(r"^(.*)\[.*\]$")
+
+
+def _fold(names: list[str], header: list[str], body: list[list[str]]):
+    """Fold columns named ``base[x]`` into extra rows (client/resultsview/table.ts)."""
+    plan: dict[str, list[int]] = {}
+    for i, name in enumerate(names):
+        m = _FOLD.match(name)
+        plan.setdefault(m.group(1) if m else name, []).append(i)
+    n_folds = max((len(v) for v in plan.values()), default=1)
+    if n_folds == 1:
+        return header, body
+    bases = list(plan)
+    new_header = [header[plan[b][0]] for b in bases]
+    new_body = []
+    for row in body:
+        for fold in range(n_folds):
+            new_body.append([row[plan[b][fold]] if fold < len(plan[b]) else "" for b in bases])
+    return new_header, new_body
+
+
 def table_to_markdown(table, title: str = "") -> str:
+    """A results table as a Markdown table (transposed like the jamovi client)."""
     cols = [c for c in table.columns if _visible(c)]
     if not cols:
         return ""
     n_rows = max((len(c.cells) for c in cols), default=0)
-    lines = []
-    if title:
-        lines.append(f"**{title}**")
-    header = [(c.superTitle + " " if c.superTitle else "") + (c.title or c.name) for c in cols]
-    lines.append("| " + " | ".join(h.strip() for h in header) + " |")
-    lines.append("|" + "---|" * len(cols))
-    for r in range(min(n_rows, MAX_ROWS)):
-        row = []
-        for c in cols:
-            row.append(format_cell(c.cells[r], c.format) if r < len(c.cells) else "")
+    header = [((c.superTitle + " ") if c.superTitle else "") + (c.title or c.name) for c in cols]
+    header = [h.strip() for h in header]
+    body = [[format_cell(c.cells[r], c.format) if r < len(c.cells) else "" for c in cols]
+            for r in range(n_rows)]
+
+    header, body = _fold([c.name for c in cols], header, body)
+
+    if getattr(table, "swapRowsColumns", False):
+        # same as client/resultsview/table.ts: rows become columns
+        new_header = [header[0]] + [row[0] for row in body]
+        new_body = [[header[c]] + [row[c] for row in body] for c in range(1, len(header))]
+        header, body = new_header, new_body
+
+    lines = [f"**{title}**"] if title else []
+    lines.append("| " + " | ".join(header) + " |")
+    lines.append("|" + "---|" * len(header))
+    for row in body[:MAX_ROWS]:
         lines.append("| " + " | ".join(row) + " |")
-    if n_rows > MAX_ROWS:
-        lines.append(f"_({n_rows - MAX_ROWS} more rows not shown)_")
+    if len(body) > MAX_ROWS:
+        lines.append(f"_({len(body) - MAX_ROWS} more rows not shown)_")
     for note in table.notes:
         if note.note:
             lines.append(f"_Note: {_strip_html(note.note)}_")
@@ -78,7 +107,7 @@ def table_to_markdown(table, title: str = "") -> str:
 
 def element_to_markdown(elem, depth: int = 0) -> str:
     """Recursively render a results element; empty parts are skipped."""
-    if not _visible(elem):
+    if not _visible(elem) or elem.name == "syntax":  # R syntax block, not results
         return ""
     kind = elem.WhichOneof("type")
     title = elem.title
