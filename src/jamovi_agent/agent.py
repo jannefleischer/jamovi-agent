@@ -115,7 +115,7 @@ class Agent:
             history.append(entry)
 
             if not calls:
-                yield {"type": "message", "content": reply.get("content") or ""}
+                yield {"type": "message", "content": (reply.get("content") or "").strip()}
                 yield {"type": "done", "steps": step, "usage": usage}
                 return
 
