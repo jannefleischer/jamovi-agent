@@ -145,12 +145,14 @@
         root.innerHTML = '';
 
         const log = el('div', 'jamovi-assistant-log');
-        const form = el('form', 'jamovi-assistant-form');
+        // no <form>: jamovi's results frame is sandboxed without allow-forms,
+        // which blocks form submission (the submit event never fires)
+        const form = el('div', 'jamovi-assistant-form');
         const input = el('textarea', 'jamovi-assistant-input');
         input.rows = 2;
         input.placeholder = TEXT.placeholder;
         const send = el('button', 'jamovi-assistant-send', TEXT.send);
-        send.type = 'submit';
+        send.type = 'button';
         const reset = el('button', 'jamovi-assistant-reset', TEXT.reset);
         reset.type = 'button';
         reset.title = TEXT.resetTitle;
@@ -222,17 +224,17 @@
             }
         }
 
-        form.addEventListener('submit', ev => {
-            ev.preventDefault();
+        function submit() {
             const text = input.value.trim();
             if (!text || send.disabled) return;
             input.value = '';
             ask(text);
-        });
+        }
+        send.addEventListener('click', submit);
         input.addEventListener('keydown', ev => {
             if (ev.key === 'Enter' && !ev.shiftKey) {
                 ev.preventDefault();
-                form.requestSubmit();
+                submit();
             }
             ev.stopPropagation();  // keep jamovi shortcuts out of the text field
         });
