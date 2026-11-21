@@ -107,7 +107,7 @@ async def main() -> int:
             health = await r.json()
             ok &= check(r.status == 200, f"agent/health -> {r.status}")
         ok &= check(health.get("ui") in ("module", "sidebar", "both", "off"), f"ui mode: {health.get('ui')}")
-        for name in ("chat.js", "chat.css", "sidebar.js"):
+        for name in ("chat.js", "chat.css", "page.js"):
             async with http.get(f"{base}/agent/static/{name}") as r:
                 ok &= check(r.status == 200 and len(await r.read()) > 500, f"static {name}")
         async with http.get(f"{base}/agent/static/../web.py") as r:

@@ -31,7 +31,7 @@ def _enabled() -> bool:
 UI_MODES = ("module", "sidebar", "both", "off")
 STATIC_DIR = os.path.join(os.path.dirname(__file__), "static")
 STATIC_FILES = {"chat.js": "application/javascript", "chat.css": "text/css",
-                "sidebar.js": "application/javascript"}
+                "page.js": "application/javascript"}
 MAX_SAVED_MESSAGES = 60
 
 

@@ -1,13 +1,25 @@
 /*
- * Sidebar variant of the assistant UI, loaded by the jamovi main page
- * (index.html gets <script src="../agent/static/sidebar.js"> at image build).
+ * Script for the jamovi main page (index.html gets
+ * <script src="../agent/static/page.js"> at image build). Two jobs:
  *
- * Does nothing unless agent/health reports ui "sidebar" or "both"
- * (JAMOVI_AGENT_UI). The main page is served at <root>/<instance>/, so the
- * agent API is at ../agent/ and the instance id is the last path segment.
+ * 1. Module variant: jamovi puts a transparent cover over every result that
+ *    is not the selected analysis; a click on it only selects the analysis.
+ *    When the assistant runs an analysis, the client selects the new one, so
+ *    the chat would no longer take clicks. The covers of assistant results
+ *    are switched off, so the chat is always usable.
+ * 2. Sidebar variant: only if agent/health reports ui "sidebar" or "both"
+ *    (JAMOVI_AGENT_UI).
+ *
+ * The main page is served at <root>/<instance>/, so the agent API is at
+ * ../agent/ and the instance id is the last path segment.
  */
 (function () {
     'use strict';
+    const style = document.createElement('style');
+    style.textContent =
+        ".jmv-results-container[data-analysis-name='assistant'] .jmv-results-cover { display: none; }";
+    document.head.appendChild(style);
+
     const base = new URL('../agent/', window.location.href).href;
     const match = window.location.pathname.match(/\/([0-9a-f-]{36})\/?$/);
     const instanceId = match ? match[1] : '';

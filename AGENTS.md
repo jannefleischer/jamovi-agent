@@ -29,7 +29,7 @@ into this repository; deployment specifics belong to the deploying stack
 | `src/jamovi_agent/docs.py`, `prompt.py`, `knowledge.py` | local docs index (BM25), system prompt |
 | `src/jamovi_agent/mcp.py` | MCP server (Streamable HTTP, JSON responses) |
 | `src/jamovi_agent/web.py` | HTTP API under `<jamovi root>/agent/`, UI mode, conversation persistence |
-| `src/jamovi_agent/static/` | chat widget (`chat.js`, `chat.css`) and sidebar loader (`sidebar.js`) |
+| `src/jamovi_agent/static/` | chat widget (`chat.js`, `chat.css`) and main-page script (`page.js`: sidebar, cover fix) |
 | `module/jamoviassistant/` | jamovi module **jamovi-assistant** (R + YAML), hosts the chat in the results |
 | `shim/extras.py` | one-liner installed as `jamovi/server/extras.py` |
 | `scripts/smoke.py`, `scripts/smoke.sh` | end-to-end test in a jamovi container |
@@ -69,9 +69,15 @@ by the agent at `agent/static/`, and the same API (`history`, `chat` as SSE,
    after each turn, so it is **saved with the .omv**; on the first `history`
    or `chat` request after opening a file it is restored from there.
 2. **Sidebar (`sidebar` or `both`)** – `index.html` always loads
-   `../agent/static/sidebar.js` (patched in at image build). The script asks
+   `../agent/static/page.js` (patched in at image build). The script asks
    `agent/health` and only shows the button/panel if the mode allows it. Not
    saved in the file; the history lives in memory per instance.
+
+`page.js` also matters for the module: jamovi covers every result that is not
+the selected analysis with a transparent `.jmv-results-cover` (a click only
+selects). After the assistant runs an analysis the client selects the new
+one, so `page.js` hides the covers of `assistant` results to keep the chat
+clickable.
 
 ## Invariants – read before changing jamovi-facing code
 
