@@ -26,7 +26,9 @@ class LLMConfig:
 
     @classmethod
     def from_env(cls) -> "LLMConfig":
-        headers = {}
+        # LiteLLM statistics take the application from the first word of the User-Agent
+        headers = {"User-Agent": os.environ.get("JAMOVI_AGENT_USER_AGENT",
+                                                "jamovi-Agent (ILS JupyterHub)")}
         user = os.environ.get("ILS_LLM_USER", "").strip()
         if user:
             # LiteLLM usage accounting per user (same header as Open WebUI)
