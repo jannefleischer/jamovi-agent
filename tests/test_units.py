@@ -198,6 +198,17 @@ class AgentTests(unittest.TestCase):
         self.assertEqual(agent.history("i1")[-1]["content"], "60 Fälle.")
         self.assertEqual(events[-1]["usage"]["prompt_tokens"], 10)
 
+    def test_thinking_events(self):
+        client = FakeClient([
+            {"content": "<think>inline</think>Antwort", "reasoning_content": "field"},
+        ])
+        agent = Agent(FakeToolbox(), client)
+        events = run(agent.run("i1", "x"))
+        thinking = [e for e in events if e["type"] == "thinking"]
+        self.assertEqual(thinking[0]["content"], "field\n\ninline")
+        self.assertEqual([e for e in events if e["type"] == "message"][0]["content"], "Antwort")
+        self.assertEqual(agent.history("i1")[-1]["content"], "Antwort")  # no reasoning saved
+
     def test_step_limit(self):
         call = {"content": None, "tool_calls": [{"id": "c", "type": "function", "function": {
             "name": "get_dataset_schema", "arguments": "{}"}}]}

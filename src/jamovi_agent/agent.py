@@ -4,6 +4,8 @@ For every user message the agent alternates between the LLM and the tools
 until the LLM answers without tool calls, or a limit (steps, time) is hit.
 Progress is yielded as events, which the web layer streams to the client:
 
+- ``{"type": "thinking", "content"}`` reasoning of the model for this step, if it
+  provides any (``reasoning_content``/``reasoning`` or ``<think>…</think>``)
 - ``{"type": "tool_call", "name", "arguments"}``
 - ``{"type": "tool_result", "name", "result"}`` (shortened)
 - ``{"type": "message", "content"}`` final answer
@@ -18,6 +20,7 @@ import asyncio
 import json
 import logging
 import os
+import re
 from typing import AsyncIterator, Callable
 
 from .llm import LLMClient, LLMConfig, LLMError
@@ -34,6 +37,29 @@ def _env_int(name: str, default: int) -> int:
         return int(os.environ.get(name, default))
     except ValueError:
         return default
+
+
+_THINK = re.compile(r"<think>(.*?)</think>", re.S)
+
+
+def split_thinking(reply: dict) -> str:
+    """Take the model's reasoning out of a reply (in place) and return it.
+
+    Reasoning models behind LiteLLM/vLLM return it as ``reasoning_content``
+    (or ``reasoning``); others put ``<think>…</think>`` into the content. It is
+    shown to the user but never sent back to the model or saved.
+    """
+    parts = []
+    for key in ("reasoning_content", "reasoning"):
+        value = reply.pop(key, None)
+        if isinstance(value, str) and value.strip() and value.strip() not in parts:
+            parts.append(value.strip())
+    content = reply.get("content")
+    if isinstance(content, str) and "<think>" in content:
+        parts += [m.strip() for m in _THINK.findall(content) if m.strip()]
+        reply["content"] = _THINK.sub("", content).strip()
+    reply.pop("provider_specific_fields", None)
+    return "\n\n".join(parts)
 
 
 class Agent:
@@ -98,6 +124,10 @@ class Agent:
             for k, v in (reply.pop("_usage", None) or {}).items():
                 if k in usage and isinstance(v, int):
                     usage[k] += v
+
+            thinking = split_thinking(reply)
+            if thinking:
+                yield {"type": "thinking", "content": thinking}
 
             calls = reply.get("tool_calls") or []
             entry = {"role": "assistant", "content": reply.get("content")}
