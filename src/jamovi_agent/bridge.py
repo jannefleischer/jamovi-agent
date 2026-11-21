@@ -28,6 +28,9 @@ from typing import Any, Iterable
 log = logging.getLogger(__name__)
 
 
+ASSISTANT_NS = "jamoviassistant"  # the jamovi-assistant module (chat UI, not an analysis)
+
+
 class BridgeError(Exception):
     """A request the bridge cannot fulfil (unknown instance, analysis, ...)."""
 
@@ -195,7 +198,8 @@ class Bridge:
     def catalogue(self) -> Iterable[tuple[Any, Any]]:
         """(module_meta, analysis_meta) for every analysis in visible modules."""
         for module in self._session.modules:
-            if not getattr(module, "visible", True) or getattr(module, "incompatible", False):
+            if (not getattr(module, "visible", True) or getattr(module, "incompatible", False)
+                    or module.name == ASSISTANT_NS):
                 continue
             for analysis in module.analyses:
                 yield module, analysis
@@ -215,7 +219,15 @@ class Bridge:
     def analyses(self, inst) -> list:
         """User-visible analyses of an instance (annotations excluded)."""
         return [a for a in inst.analyses
-                if a.name not in ("empty", "weights") and a.status.name != "DELETED"]
+                if a.name not in ("empty", "weights") and a.ns != ASSISTANT_NS
+                and a.status.name != "DELETED"]
+
+    def assistant_analysis(self, inst):
+        """The first jamovi-assistant analysis (chat panel) of an instance, if any."""
+        for a in inst.analyses:
+            if a.ns == ASSISTANT_NS and a.status.name != "DELETED":
+                return a
+        return None
 
     def analysis(self, inst, analysis_id: int):
         a = inst.analyses.get(int(analysis_id))
@@ -284,8 +296,10 @@ class Bridge:
         analysis = self.analysis(inst, analysis_id)
         merged = self.options_dict(analysis)
         merged.update(values)
+        # keep the revision: the client only adopts options from the server when
+        # the revision matches its own (client/main/instance.ts, AnalysisResponse)
         analysis.set_options(self.options_pb(merged), list(values.keys()),
-                             analysis.revision + 1, True)
+                             analysis.revision, True)
         inst.project.is_edited = True
         return analysis
 

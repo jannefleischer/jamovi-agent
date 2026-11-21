@@ -28,6 +28,19 @@ def _enabled() -> bool:
     return os.environ.get("JAMOVI_AGENT_ENABLED", "true").lower() not in ("0", "false", "no")
 
 
+UI_MODES = ("module", "sidebar", "both", "off")
+STATIC_DIR = os.path.join(os.path.dirname(__file__), "static")
+STATIC_FILES = {"chat.js": "application/javascript", "chat.css": "text/css",
+                "sidebar.js": "application/javascript"}
+MAX_SAVED_MESSAGES = 60
+
+
+def ui_mode() -> str:
+    """Which chat UI to offer: module (default; saved in the .omv), sidebar, both, off."""
+    mode = os.environ.get("JAMOVI_AGENT_UI", "module").strip().lower()
+    return mode if mode in UI_MODES else "module"
+
+
 async def _body(request: web.Request) -> dict:
     if not request.can_read_body:
         return {}
@@ -59,7 +72,7 @@ class AgentWeb:
         return self._agent
 
     def routes(self) -> list[tuple[str, object]]:
-        routes = [("/agent/health", self.health)]
+        routes = [("/agent/health", self.health), ("/agent/static/{name}", self.static)]
         if not _enabled():
             return routes
         return routes + [
@@ -76,7 +89,7 @@ class AgentWeb:
     async def health(self, request: web.Request) -> web.Response:
         from .llm import LLMConfig
         cfg = LLMConfig.from_env()
-        data = {"ok": True, "enabled": _enabled(), "model": cfg.model,
+        data = {"ok": True, "enabled": _enabled(), "ui": ui_mode(), "model": cfg.model,
                 "endpoint_configured": bool(cfg.base_url)}
         if _enabled():
             try:
@@ -84,6 +97,48 @@ class AgentWeb:
             except Exception as e:  # health must always answer
                 data["knowledge"] = {"error": str(e)}
         return _json(data)
+
+    async def static(self, request: web.Request) -> web.Response:
+        """Chat widget files (whitelist), used by both UI variants."""
+        name = request.match_info["name"]
+        if name not in STATIC_FILES:
+            raise web.HTTPNotFound()
+        with open(os.path.join(STATIC_DIR, name), encoding="utf-8") as f:
+            text = f.read()
+        return web.Response(text=text, content_type=STATIC_FILES[name],
+                            headers={"Cache-Control": "no-cache"})
+
+    # ----- conversation stored in the jamovi-assistant analysis (.omv) ------------
+
+    def _restore(self, inst) -> None:
+        """Seed the conversation from the assistant analysis after a file was opened."""
+        if self.agent.has_history(inst.id):
+            return
+        analysis = self.bridge.assistant_analysis(inst)
+        if analysis is None:
+            return
+        raw = self.bridge.options_dict(analysis).get("chat") or ""
+        try:
+            messages = json.loads(raw) if raw else []
+        except ValueError:
+            log.warning("jamovi_agent: unreadable conversation in analysis %s", analysis.id)
+            return
+        if isinstance(messages, list) and messages:
+            self.agent.seed(inst.id, messages)
+
+    def _persist(self, inst) -> None:
+        """Write the conversation into the assistant analysis, so it is saved with the file."""
+        analysis = self.bridge.assistant_analysis(inst)
+        if analysis is None:
+            return
+        messages = self.agent.history(inst.id)[-MAX_SAVED_MESSAGES:]
+        text = json.dumps(messages, ensure_ascii=False) if messages else ""
+        if text == (self.bridge.options_dict(analysis).get("chat") or ""):
+            return
+        try:
+            self.bridge.update_analysis(inst, analysis.id, {"chat": text})
+        except BridgeError:
+            log.exception("jamovi_agent: could not save the conversation")
 
     async def instances(self, request: web.Request) -> web.Response:
         return _json([self.bridge.instance_summary(i) for i in self.bridge.instances()])
@@ -118,10 +173,15 @@ class AgentWeb:
                                            "Cache-Control": "no-cache",
                                            "X-Accel-Buffering": "no"})
         await resp.prepare(request)
-        async for event in self.agent.run(inst.id, message):
-            data = json.dumps(event, ensure_ascii=False, default=str)
-            await resp.write(f"event: {event['type']}\ndata: {data}\n\n".encode())
-        await resp.write_eof()
+        self._restore(inst)
+        try:
+            async for event in self.agent.run(inst.id, message):
+                data = json.dumps(event, ensure_ascii=False, default=str)
+                await resp.write(f"event: {event['type']}\ndata: {data}\n\n".encode())
+            await resp.write_eof()
+        finally:
+            # also when the browser went away mid-answer
+            self._persist(inst)
         return resp
 
     async def prompt(self, request: web.Request) -> web.Response:
@@ -133,6 +193,7 @@ class AgentWeb:
             inst = self.bridge.instance(request.query.get("instance_id"))
         except BridgeError as e:
             return _json({"error": str(e)}, 400)
+        self._restore(inst)
         return _json(self.agent.history(inst.id))
 
     async def reset(self, request: web.Request) -> web.Response:
@@ -144,4 +205,5 @@ class AgentWeb:
         except BridgeError as e:
             return _json({"error": str(e)}, 400)
         self.agent.reset(inst.id)
+        self._persist(inst)
         return _json({"ok": True})

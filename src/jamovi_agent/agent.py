@@ -55,6 +55,15 @@ class Agent:
         return [m for m in self._histories.get(instance_id, [])
                 if m["role"] in ("user", "assistant") and m.get("content")]
 
+    def has_history(self, instance_id: str) -> bool:
+        return bool(self._histories.get(instance_id))
+
+    def seed(self, instance_id: str, messages: list[dict]) -> None:
+        """Start a conversation from saved user/assistant messages (e.g. from a .omv)."""
+        clean = [{"role": m["role"], "content": str(m["content"])} for m in messages
+                 if isinstance(m, dict) and m.get("role") in ("user", "assistant") and m.get("content")]
+        self._histories[instance_id] = clean
+
     def reset(self, instance_id: str) -> None:
         self._histories.pop(instance_id, None)
 
