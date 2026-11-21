@@ -1,12 +1,95 @@
-# jamovi_agent
+# jamovi-agent
 
-An LLM agent that works inside a running jamovi 28.x server: it inspects the
-open data set, creates and runs analyses that show up live in the user's
-browser, and interprets the results. It talks to any OpenAI-compatible chat
-completions endpoint (e.g. LiteLLM, vLLM, Ollama, OpenAI).
+**An AI assistant inside jamovi.** You ask in plain language ("Is there a
+difference in tooth length between the two supplements?"), and the assistant
+looks at your open data set, picks a suitable analysis, runs it in jamovi so it
+appears in your results like any analysis you would have clicked together
+yourself, and explains the outcome. You can change or delete those analyses as
+usual; the conversation is saved with your `.omv` file.
 
-Developed for running jamovi behind JupyterHub, but it has no dependency on
-JupyterHub.
+The assistant needs a large language model (LLM). It works with any service that
+offers the OpenAI chat API with tool calling: OpenAI, a LiteLLM or vLLM gateway,
+or a local Ollama.
+
+## What you need
+
+- **jamovi 28.x as a server** (the web version, e.g. in Docker), not the desktop
+  app. Tested with **28.18**. jamovi-agent uses jamovi's optional hook
+  `jamovi.server.extras`, which exists in the 28 series; other versions may need
+  adjustments (see `bridge.py`).
+- **Path mode**: jamovi must serve its three parts under one address with a
+  path, e.g. `JAMOVI_HOST_A=example.org/jamovi`, `JAMOVI_HOST_B=example.org/jamovi/a`,
+  `JAMOVI_HOST_C=example.org/jamovi/r`. The chat in the results panel reaches the
+  assistant only this way. jamovi's client uses absolute asset paths, which do
+  not work in path mode; `docker_example/Dockerfile` contains the small `sed`
+  patches that fix this.
+- **An LLM endpoint** with tool calling (function calling) and an API key.
+  Small local models pick wrong analyses or options more often; test with your
+  own data before rolling out.
+- Data leaves the server only as far as the assistant needs it: variable names,
+  summaries and analysis results go to the LLM, raw rows only if
+  `JAMOVI_AGENT_ALLOW_RAW_DATA=true`. Choose the endpoint accordingly.
+
+Official jamovi images on Docker Hub stop at 28.0; build the base image from
+the jamovi sources (`docker build -f docker/jamovi-Dockerfile -t
+jamovi/jamovi:28.18 .` in a jamovi checkout).
+
+## Installation
+
+### Try it: the Docker example
+
+```sh
+ci/build.sh                                   # builds dist/ (module + package)
+cp docker_example/.env.example docker_example/.env   # enter endpoint, key, model
+docker compose -f docker_example/compose.yaml up --build
+```
+
+Open http://localhost:41337/jamovi/, load a data set, then choose **Analyses →
+Assistant → Assistant** and type your question in the results panel.
+`ci/build.sh` needs R and network access; without a local R run it in a
+container: `docker run --rm -v $PWD:/w -w /w rocker/r-ver:4.6.0 ci/build.sh`.
+
+### Into your own jamovi image
+
+A release (GitLab: *Deploy → Releases*) contains
+
+| File | What it is |
+|---|---|
+| `jamovi-agent-<version>.tar.gz` | the server extension (`src/jamovi_agent`, `shim/extras.py`) |
+| `jamoviassistant_<version>.jmo` | the jamovi module with the chat |
+| `SHA256SUMS` | checksums |
+
+Three steps in your Dockerfile, plus the path-mode patches (see `docker_example/Dockerfile`):
+
+1. copy `src/jamovi_agent` to `/usr/lib/jamovi/server/jamovi_agent`,
+2. copy `shim/extras.py` to `/usr/lib/jamovi/server/jamovi/server/extras.py`,
+3. unzip the `.jmo` into `/usr/lib/jamovi/modules/` (then it is installed for
+   all users and cannot be removed by them).
+
+Then set at least `OPENAI_BASE_URL`, `OPENAI_API_KEY` and `JAMOVI_AGENT_MODEL`
+(all options: [Configuration](#configuration-environment)). Check the setup at
+`<jamovi address>/agent/health`: it shows whether the endpoint is configured,
+without revealing secrets.
+
+### Releases
+
+The GitLab pipeline (`.gitlab-ci.yml`) runs the unit tests and builds `dist/`
+on every push. A tag `vX.Y.Z` additionally uploads the files to the package
+registry and creates a release:
+
+```sh
+# bump version in pyproject.toml and module/jamoviassistant (DESCRIPTION, jamovi/0000.yaml)
+git tag v0.2.0 && git push origin v0.2.0
+```
+
+## License
+
+AGPL-3.0 for the server extension, GPL-2.0-or-later for the jamovi module, like
+jamovi itself (details in `LICENSE.md`).
+
+---
+
+# Technical details
 
 ## How it hooks into jamovi
 
