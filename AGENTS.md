@@ -93,6 +93,9 @@ by the agent at `agent/static/`, and the same API (`history`, `chat` as SSE,
   in the same origin (no external URLs), and **no `<form>`**: without
   `allow-forms` the browser blocks submission and the `submit` event never fires.
   Use buttons with click handlers.
+- **Streaming through jupyter-server-proxy:** it buffers responses unless the
+  request has exactly `Accept: text/event-stream`; `chat.js` sends it, so
+  progress events arrive while the agent works.
 - **Paths behind a prefix:** jamovi runs under `/user/<name>/jamovi/…`. Never
   use root-absolute URLs (`/agent/…`); resolve relative to the page
   (`new URL('../agent/', location.href)`). The stack patches jamovi's own client

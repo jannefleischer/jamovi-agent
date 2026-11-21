@@ -197,7 +197,9 @@
             try {
                 const r = await fetch(base + 'chat', {
                     method: 'POST', credentials: 'same-origin',
-                    headers: { 'Content-Type': 'application/json' },
+                    // exactly this Accept value makes jupyter-server-proxy stream the
+                    // response instead of buffering it until the turn is finished
+                    headers: { 'Content-Type': 'application/json', 'Accept': 'text/event-stream' },
                     body: JSON.stringify({ message: text, instance_id: instanceId || undefined }),
                 });
                 if (!r.ok) {
