@@ -35,6 +35,9 @@ jamovi's default behaviour (open into a new instance).
 | `llm.py` | minimal async client for `/chat/completions` (aiohttp, no SDK) |
 | `agent.py` | tool-calling loop with step/time limits, per-instance history |
 | `web.py` | HTTP API under `<jamovi root>/agent/` |
+| `docs.py` | local documentation index (Markdown sections + analysis descriptions, BM25) |
+| `prompt.py` | system prompt: file or built-in default, placeholders |
+| `knowledge.py` | builds index and prompt lazily; `search_docs` / `read_doc` / `explain_analysis` |
 
 No third-party dependencies beyond what jamovi already ships (`aiohttp`,
 `protobuf`).
@@ -51,6 +54,7 @@ All paths are relative to the jamovi root (behind JupyterHub:
 | GET | `agent/tools` | tool schemas as sent to the LLM |
 | POST | `agent/tools/{name}` | call one tool directly (JSON body = arguments) |
 | POST | `agent/chat` | `{"message": "...", "instance_id": optional}` → Server-Sent Events |
+| GET | `agent/prompt` | the rendered system prompt |
 | GET | `agent/history` | chat history of an instance |
 | POST | `agent/reset` | clear the history |
 
@@ -66,6 +70,37 @@ All paths are relative to the jamovi root (behind JupyterHub:
 | `JAMOVI_AGENT_TIMEOUT` | `300` | seconds per user message |
 | `JAMOVI_AGENT_ALLOW_RAW_DATA` | `false` | allow `get_data` to return raw rows |
 | `ILS_LLM_USER` | – | sent as `X-OpenWebUI-User-Email` for usage accounting |
+| `JAMOVI_AGENT_DOCS` | `/opt/jamovi-agent/docs` | documentation directory (Markdown) |
+| `JAMOVI_AGENT_PROMPT_FILE` | – | system prompt file; default `<docs>/system-prompt.md`, then built-in |
+| `JAMOVI_AGENT_USER_AGENT` | `jamovi-Agent (ILS JupyterHub)` | User-Agent sent to the endpoint |
+
+## Documentation and system prompt
+
+The agent searches a local documentation directory and the descriptions of
+all installed analyses (from the module definitions jamovi has loaded).
+
+```
+docs/
+  system-prompt.md          optional; replaces the built-in prompt
+  handbook/filters.md       one Markdown file per chapter or topic
+  statistik/tests.md
+```
+
+Each file may start with front matter:
+
+```
+---
+title: Filters
+source: handbook          # default: first directory name
+license: CC BY-SA 4.0
+url: https://…
+---
+```
+
+Files are split into sections at headings (`#`–`###`); `search_docs`
+returns section ids (`handbook/filters.md#2`), `read_doc` reads a section or
+a whole file. Placeholders in the prompt: `{{docs_index}}`, `{{modules}}`,
+`{{jamovi_version}}`. Results of analyses include their references.
 
 ## Development
 

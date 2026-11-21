@@ -13,7 +13,7 @@ from dataclasses import dataclass, field
 from typing import Any, Awaitable, Callable
 
 from .bridge import Bridge, BridgeError
-from .results import analysis_to_markdown
+from .results import analysis_to_markdown, references
 
 MAX_TEXT = 12000
 MAX_DATA_ROWS = 200
@@ -133,8 +133,9 @@ def _params(props: dict, required: list[str] | None = None) -> dict:
 class Toolbox:
     """All tools bound to one ``Bridge``."""
 
-    def __init__(self, bridge: Bridge):
+    def __init__(self, bridge: Bridge, knowledge=None):
         self.b = bridge
+        self.knowledge = knowledge
         self.tools: dict[str, Tool] = {}
         self._register()
 
@@ -201,6 +202,26 @@ class Toolbox:
                   _params({"analysis_id": {"type": "integer"},
                            "options": {"type": "object"}}, ["analysis_id", "options"]),
                   self.update_analysis, writes=True)
+        if self.knowledge is not None:
+            self._add("search_docs",
+                      "Search the local documentation (jamovi manual, statistics texts, ILS notes) "
+                      "and the descriptions of all installed analyses. Use for questions about "
+                      "methods, assumptions, interpretation or how to do something in jamovi.",
+                      {"type": "object", "properties": {
+                          "query": {"type": "string", "description": "keywords, German or English"},
+                          "source": {"type": "string", "description": "optional: limit to one source "
+                                     "(e.g. 'analyses'); see the documentation list in the instructions"},
+                          "limit": {"type": "integer", "default": 6}},
+                       "required": ["query"]}, self.search_docs)
+            self._add("read_doc",
+                      "Read a documentation section by the id from search_docs (or a whole file "
+                      "by its path). Cite title and source when you use it.",
+                      {"type": "object", "properties": {"id": {"type": "string"}},
+                       "required": ["id"]}, self.read_doc)
+            self._add("explain_analysis",
+                      "What an analysis is for and what each of its options means, in prose.",
+                      {"type": "object", "properties": {"ns": {"type": "string"}, "name": {"type": "string"}},
+                       "required": ["ns", "name"]}, self.explain_analysis)
         self._add("get_results",
                   "Results of an existing analysis as Markdown (tables, notes, warnings).",
                   _params({"analysis_id": {"type": "integer"}}, ["analysis_id"]), self.get_results)
@@ -267,8 +288,23 @@ class Toolbox:
 
     async def _finish(self, inst, analysis) -> Any:
         status = await self.b.wait_complete(analysis)
-        text = analysis_to_markdown(analysis.results) if analysis.results is not None else ""
-        return {"analysis_id": analysis.id, "status": status.lower(), "results": _truncate(text)}
+        out = {"analysis_id": analysis.id, "status": status.lower(), "results": ""}
+        if analysis.results is not None:
+            out["results"] = _truncate(analysis_to_markdown(analysis.results))
+            refs = references(analysis.results)
+            if refs:
+                out["references"] = refs
+        return out
+
+    async def search_docs(self, query: str, source: str | None = None, limit: int = 6) -> Any:
+        hits = self.knowledge.index.search(query, source or None, max(1, min(int(limit), 15)))
+        return {"count": len(hits), "results": hits}
+
+    async def read_doc(self, id: str) -> Any:
+        return self.knowledge.read(id)
+
+    async def explain_analysis(self, ns: str, name: str) -> Any:
+        return self.knowledge.explain_analysis(ns, name)
 
     async def create_analysis(self, ns: str, name: str, options: dict | None = None,
                               instance_id: str | None = None) -> Any:

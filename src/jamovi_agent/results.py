@@ -147,3 +147,17 @@ def analysis_to_markdown(response) -> str:
     body = element_to_markdown(results, depth=0)
     head = f"## {title} (analysis {response.analysisId}, {response.ns}::{response.name})"
     return head + ("\n\n" + body if body else "\n\n_(no results yet)_")
+
+
+def references(response) -> list[str]:
+    """References of an analysis result in APA-like form."""
+    out = []
+    for r in getattr(response, "references", []):
+        authors = r.authors.complete.strip()
+        year = r.year2 or (str(r.year) if r.year else "")
+        parts = [f"{authors} ({year})." if authors else "", f"{r.title}." if r.title else "",
+                 r.publisher, r.url if r.url and r.url not in r.publisher else ""]
+        text = " ".join(p for p in parts if p).strip()
+        if text:
+            out.append(_strip_html(text))
+    return out

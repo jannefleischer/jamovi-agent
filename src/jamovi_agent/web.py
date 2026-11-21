@@ -13,6 +13,7 @@ import os
 from aiohttp import web
 
 from .bridge import Bridge, BridgeError
+from .knowledge import Knowledge
 from .tools import Toolbox
 
 log = logging.getLogger(__name__)
@@ -44,14 +45,15 @@ class AgentWeb:
 
     def __init__(self, session):
         self.bridge = Bridge(session)
-        self.toolbox = Toolbox(self.bridge)
+        self.knowledge = Knowledge(self.bridge)
+        self.toolbox = Toolbox(self.bridge, self.knowledge)
         self._agent = None
 
     @property
     def agent(self):
         if self._agent is None:
             from .agent import Agent
-            self._agent = Agent(self.toolbox)
+            self._agent = Agent(self.toolbox, system_prompt=lambda: self.knowledge.system_prompt)
         return self._agent
 
     def routes(self) -> list[tuple[str, object]]:
@@ -65,13 +67,20 @@ class AgentWeb:
             ("/agent/chat", self.chat),
             ("/agent/history", self.history),
             ("/agent/reset", self.reset),
+            ("/agent/prompt", self.prompt),
         ]
 
     async def health(self, request: web.Request) -> web.Response:
         from .llm import LLMConfig
         cfg = LLMConfig.from_env()
-        return _json({"ok": True, "enabled": _enabled(), "model": cfg.model,
-                      "endpoint_configured": bool(cfg.base_url)})
+        data = {"ok": True, "enabled": _enabled(), "model": cfg.model,
+                "endpoint_configured": bool(cfg.base_url)}
+        if _enabled():
+            try:
+                data["knowledge"] = self.knowledge.status()
+            except Exception as e:  # health must always answer
+                data["knowledge"] = {"error": str(e)}
+        return _json(data)
 
     async def instances(self, request: web.Request) -> web.Response:
         return _json([self.bridge.instance_summary(i) for i in self.bridge.instances()])
@@ -111,6 +120,10 @@ class AgentWeb:
             await resp.write(f"event: {event['type']}\ndata: {data}\n\n".encode())
         await resp.write_eof()
         return resp
+
+    async def prompt(self, request: web.Request) -> web.Response:
+        """The rendered system prompt (for checking what the LLM gets)."""
+        return web.Response(text=self.knowledge.system_prompt, content_type="text/plain")
 
     async def history(self, request: web.Request) -> web.Response:
         try:
