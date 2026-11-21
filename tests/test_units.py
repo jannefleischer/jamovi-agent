@@ -120,6 +120,8 @@ class SchemaTests(unittest.TestCase):
         self.assertEqual(lst["default"], "different")
         self.assertIsNone(option_schema({"name": "data", "type": "Data"}))
         self.assertIsNone(option_schema({"name": "x", "type": "Bool", "hidden": True}))
+        self.assertEqual(option_schema({"name": "code", "type": "String", "hidden": True},
+                                       settable_hidden=True)["type"], "string")
         num = option_schema({"name": "ciWidth", "type": "Number", "min": 50, "max": 99.9})
         self.assertEqual((num["minimum"], num["maximum"]), (50, 99.9))
 

@@ -55,10 +55,18 @@ def _list_values(opt: dict) -> list[str]:
     return vals
 
 
-def option_schema(opt: dict) -> dict | None:
+# Hidden options that are still the way to specify an analysis, because the
+# module fills them from its own editor (semlj: lavaan syntax and the
+# variables used in it).
+SETTABLE_HIDDEN = {
+    ("semlj", "semljsyn"): {"code", "vars"},
+}
+
+
+def option_schema(opt: dict, settable_hidden: bool = False) -> dict | None:
     """JSON schema of one jamovi option definition (None = not settable)."""
     typ = opt.get("type")
-    if opt.get("hidden") or typ in ("Data", "Output", "Action", "Outputs"):
+    if (opt.get("hidden") and not settable_hidden) or typ in ("Data", "Output", "Action", "Outputs"):
         return None
     desc = _option_title(opt)
     perm = opt.get("permitted") or opt.get("suggested")
@@ -101,9 +109,10 @@ def option_schema(opt: dict) -> dict | None:
 
 def analysis_schema(meta) -> dict:
     props = {}
+    hidden_ok = SETTABLE_HIDDEN.get((meta.defn.get("ns"), meta.defn.get("name")), set())
     for opt in meta.defn.get("options", []):
         name = opt.get("name")
-        sch = option_schema(opt)
+        sch = option_schema(opt, settable_hidden=name in hidden_ok)
         if name and sch is not None:
             props[name] = sch
     return {"type": "object", "properties": props}
