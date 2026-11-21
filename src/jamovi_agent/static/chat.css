@@ -101,3 +101,27 @@
 
 /* module variant: fixed height inside the results */
 .jamovi-assistant-module .jamovi-assistant { height: 460px; border: 1px solid #ddd; border-radius: 6px; }
+
+/* jamovi's results view sets user-select: none on everything */
+.jamovi-assistant .jamovi-assistant-log,
+.jamovi-assistant .jamovi-assistant-log * {
+    user-select: text;
+    -webkit-user-select: text;
+    -moz-user-select: text;
+    cursor: auto;
+}
+.jamovi-assistant .jamovi-assistant-log:focus { outline: none; }
+.jamovi-assistant .jamovi-assistant-thinking {
+    margin: 4px 0 4px 0;
+    color: #666;
+    font-size: 12px;
+}
+.jamovi-assistant .jamovi-assistant-thinking summary { cursor: pointer; font-style: italic; }
+.jamovi-assistant .jamovi-assistant-thinking div {
+    white-space: pre-wrap;
+    border-left: 3px solid #ddd;
+    padding: 2px 8px;
+    margin-top: 2px;
+    max-height: 240px;
+    overflow-y: auto;
+}

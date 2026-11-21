@@ -16,28 +16,29 @@
         return;
 
     const TEXT = {
-        placeholder: 'Frage zu deinen Daten oder zur Statistik …',
-        send: 'Senden',
-        reset: 'Neu',
-        resetTitle: 'Gespräch löschen',
-        thinking: 'Denkt nach …',
-        empty: 'Frag zum Beispiel: „Unterscheidet sich X zwischen den Gruppen von Y?“ '
-             + 'Analysen, die der Assistent rechnet, erscheinen im Ergebnisbereich.',
-        error: 'Fehler: ',
+        placeholder: 'Ask about your data or about statistics …',
+        send: 'Send',
+        reset: 'New',
+        resetTitle: 'Clear the conversation',
+        thinking: 'Thinking …',
+        reasoning: 'Reasoning',
+        empty: 'For example: "Does X differ between the groups of Y?" '
+             + 'Analyses the assistant runs appear in the results.',
+        error: 'Error: ',
         tools: {
-            get_dataset_schema: 'sieht sich den Datensatz an',
-            describe_variables: 'berechnet Kennwerte',
-            get_data: 'liest Daten',
-            search_analyses: 'sucht eine passende Analyse',
-            get_analysis_schema: 'prüft die Optionen',
-            list_session_analyses: 'sieht sich die vorhandenen Analysen an',
-            create_analysis: 'rechnet eine Analyse',
-            update_analysis: 'ändert eine Analyse',
-            get_results: 'liest Ergebnisse',
-            search_docs: 'schlägt in der Dokumentation nach',
-            read_doc: 'liest Dokumentation',
-            explain_analysis: 'liest die Beschreibung der Analyse',
-            list_instances: 'sucht das jamovi-Fenster',
+            get_dataset_schema: 'looking at the data set',
+            describe_variables: 'computing summaries',
+            get_data: 'reading data',
+            search_analyses: 'looking for a suitable analysis',
+            get_analysis_schema: 'checking the options',
+            list_session_analyses: 'looking at the existing analyses',
+            create_analysis: 'running an analysis',
+            update_analysis: 'changing an analysis',
+            get_results: 'reading results',
+            search_docs: 'searching the documentation',
+            read_doc: 'reading documentation',
+            explain_analysis: 'reading the description of the analysis',
+            list_instances: 'looking for the jamovi window',
         },
     };
 
@@ -145,6 +146,10 @@
         root.innerHTML = '';
 
         const log = el('div', 'jamovi-assistant-log');
+        // focusable, so Ctrl+C goes to the selection here and not to jamovi's
+        // handler that copies the whole result element
+        log.tabIndex = -1;
+        log.addEventListener('keydown', ev => ev.stopPropagation());
         // no <form>: jamovi's results frame is sandboxed without allow-forms,
         // which blocks form submission (the submit event never fires)
         const form = el('div', 'jamovi-assistant-form');
@@ -208,7 +213,13 @@
                     throw new Error(msg);
                 }
                 for await (const ev of sse(r)) {
-                    if (ev.type === 'tool_call')
+                    if (ev.type === 'thinking') {
+                        const d = el('details', 'jamovi-assistant-thinking');
+                        d.append(el('summary', '', TEXT.reasoning), el('div', '', ev.content));
+                        log.insertBefore(d, status);
+                        log.scrollTop = log.scrollHeight;
+                    }
+                    else if (ev.type === 'tool_call')
                         status.textContent = '… ' + (TEXT.tools[ev.name] || ev.name);
                     else if (ev.type === 'message')
                         add('assistant', markdown(ev.content));
