@@ -47,6 +47,8 @@ class AgentWeb:
         self.bridge = Bridge(session)
         self.knowledge = Knowledge(self.bridge)
         self.toolbox = Toolbox(self.bridge, self.knowledge)
+        from .mcp import MCPServer
+        self.mcp = MCPServer(self.toolbox)
         self._agent = None
 
     @property
@@ -68,6 +70,7 @@ class AgentWeb:
             ("/agent/history", self.history),
             ("/agent/reset", self.reset),
             ("/agent/prompt", self.prompt),
+            ("/agent/mcp", self.mcp.handle),
         ]
 
     async def health(self, request: web.Request) -> web.Response:
