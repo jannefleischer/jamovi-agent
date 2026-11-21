@@ -7,6 +7,7 @@ outputs are truncated so they fit into an LLM context.
 from __future__ import annotations
 
 import os
+import re
 import statistics
 from collections import Counter
 from dataclasses import dataclass, field
@@ -260,17 +261,40 @@ class Toolbox:
         return {"start": start, "rows": rows}
 
     async def search_analyses(self, query: str = "") -> Any:
-        words = [w for w in query.lower().split() if w]
+        """Analyses whose title/menu match, or that offer a matching option.
+
+        A test that jamovi provides as an option of another analysis (e.g.
+        Mann-Whitney U inside the independent samples t-test) is found via
+        the option titles; ``via_options`` names those options.
+        """
+        words = [w for w in re.split(r"[\s\-_/]+", query.lower()) if w]
         hits = []
         for module, a in self.b.catalogue():
             if not getattr(a, "in_menu", True):
                 continue
-            text = " ".join(str(x) for x in (a.name, a.title, a.menuGroup, a.menuSubgroup,
-                                              a.menuTitle, a.menuSubtitle, module.title)).lower()
-            if all(w in text for w in words):
-                hits.append({"ns": a.ns, "name": a.name, "title": a.title,
-                             "menu": " / ".join(x for x in (a.menuGroup, a.menuSubgroup) if x)})
-        return {"count": len(hits), "analyses": hits[:60]}
+            fields = [getattr(a, f, "") or "" for f in
+                      ("name", "title", "menuGroup", "menuSubgroup", "menuTitle", "menuSubtitle")]
+            head = " ".join(map(str, fields + [module.title])).lower()
+            hit = {"ns": a.ns, "name": a.name, "title": a.title,
+                   "menu": " / ".join(x for x in fields[2:4] if x)}
+            if not words:
+                hits.append((0, hit))
+                continue
+            if all(w in head for w in words):
+                hits.append((2, hit))
+                continue
+            opts = []
+            for opt in (getattr(a, "defn", {}) or {}).get("options", []):
+                text = f"{opt.get('name', '')} {opt.get('title', '')}".lower()
+                if all(w in text for w in words):
+                    opts.append(opt.get("name"))
+            if opts:
+                hits.append((1, {**hit, "via_options": opts}))
+        hits.sort(key=lambda h: -h[0])
+        out = {"count": len(hits), "analyses": [h for _, h in hits[:60]]}
+        if not hits and self.knowledge is not None:
+            out["hint"] = "nothing found by name; try search_docs for the method"
+        return out
 
     async def get_analysis_schema(self, ns: str, name: str) -> Any:
         meta = self.b.analysis_meta(ns, name)

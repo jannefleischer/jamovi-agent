@@ -164,6 +164,14 @@ class KnowledgeTests(unittest.TestCase):
         res = asyncio.run(tb.call("explain_analysis", {"ns": "jmv", "name": "ttestIS"}))
         self.assertIn("Mann-Whitney U", res["description"])
 
+    def test_search_analyses_via_options(self):
+        tb = Toolbox(FakeBridge(), self.k)
+        res = asyncio.run(tb.call("search_analyses", {"query": "Mann-Whitney"}))
+        self.assertEqual(res["analyses"][0]["name"], "ttestIS")
+        self.assertEqual(res["analyses"][0]["via_options"], ["mann"])
+        res = asyncio.run(tb.call("search_analyses", {"query": "xyzzy"}))
+        self.assertIn("search_docs", res["hint"])
+
     def test_toolbox_without_knowledge(self):
         self.assertNotIn("search_docs", Toolbox(FakeBridge()).tools)
 
