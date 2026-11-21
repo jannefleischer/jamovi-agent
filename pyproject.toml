@@ -1,0 +1,14 @@
+[build-system]
+requires = ["setuptools>=61"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "jamovi-agent"
+version = "0.1.0"
+description = "LLM agent running inside the jamovi server, OpenAI-compatible endpoint"
+requires-python = ">=3.10"
+# Runs in jamovi's own Python; aiohttp and protobuf come with jamovi.
+dependencies = []
+
+[tool.setuptools.packages.find]
+where = ["src"]
