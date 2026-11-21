@@ -1,0 +1,11 @@
+---
+name: assistant
+title: KI-Assistent
+jrs: '1.1'
+
+items:
+    - name: panel
+      title: ''
+      type: Html
+      description: the chat panel (rendered by the jamovi_agent web UI)
+...

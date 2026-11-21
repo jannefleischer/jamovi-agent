@@ -1,0 +1,3 @@
+# jamovi-assistant
+export(assistant)
+importFrom(R6,R6Class)

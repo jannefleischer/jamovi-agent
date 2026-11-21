@@ -1,0 +1,31 @@
+---
+name: assistant
+title: KI-Assistent
+menuGroup: KI-Assistent
+version: '0.1.0'
+jas: '1.2'
+
+description:
+    main: >-
+      A chat with the jamovi-assistant in the results panel. The assistant can
+      inspect the data set, run analyses in this window and explain results.
+    R:
+      dontrun: true
+      usage: ''
+
+options:
+    - name: data
+      type: Data
+      description:
+          R: the data as a data frame
+
+    - name: chat
+      title: Conversation
+      type: String
+      default: ''
+      hidden: true
+      description:
+          R: >-
+            the conversation as JSON (list of {role, content}); written by the
+            jamovi_agent server extension, so it is saved with the .omv file
+...

@@ -1,0 +1,25 @@
+---
+title: jamovi-assistant
+name: jamoviassistant
+version: 0.1.0
+jms: '1.0'
+authors:
+  - jamovi-assistant contributors
+maintainer: jamovi-assistant contributors <noreply@example.org>
+date: '2026-11-21'
+type: R
+description: >-
+  Chat with an LLM assistant that inspects the open data set, runs analyses in
+  this window and explains the results. Needs the jamovi_agent server extension
+  and an OpenAI-compatible endpoint. The conversation is saved with the file.
+analyses:
+  - title: KI-Assistent
+    name: assistant
+    ns: jamoviassistant
+    menuGroup: KI-Assistent
+    menuTitle: KI-Assistent (Chat)
+    menuSubtitle: Fragen zu Daten und Statistik
+    description: >-
+      A chat with the jamovi-assistant in the results panel. The assistant
+      can run analyses in this window; the conversation is saved with the file.
+...

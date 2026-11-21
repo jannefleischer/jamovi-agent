@@ -1,0 +1,14 @@
+Package: jamoviassistant
+Type: Package
+Title: Chat with an LLM Assistant that Works in the Open jamovi Window
+Version: 0.1.0
+Author: jamovi-assistant contributors
+Maintainer: jamovi-assistant contributors <noreply@example.org>
+Description: The results panel of this analysis hosts a chat with the
+    jamovi-assistant (the jamovi_agent server extension). The conversation is
+    stored in a hidden option, so it is saved with the .omv file.
+License: GPL (>= 2)
+Encoding: UTF-8
+Imports:
+    jmvcore (>= 2.4.0),
+    R6
