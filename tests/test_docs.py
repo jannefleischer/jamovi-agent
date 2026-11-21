@@ -107,6 +107,30 @@ class DocsTests(unittest.TestCase):
         self.assertEqual(index.search("xyzzy"), [])
 
 
+class ModelTermsTests(unittest.TestCase):
+
+    def meta(self, *names):
+        return SimpleNamespace(defn={"options": [{"name": n} for n in names]})
+
+    def test_blocks_from_covs_and_factors(self):
+        from jamovi_agent.tools import fill_model_terms
+        opts = {"dep": "y", "covs": ["a", "b"], "factors": ["g"], "blocks": [[]]}
+        self.assertEqual(fill_model_terms(self.meta("dep", "covs", "factors", "blocks"), opts), ["blocks"])
+        self.assertEqual(opts["blocks"], [[["a"], ["b"], ["g"]]])
+
+    def test_explicit_blocks_kept(self):
+        from jamovi_agent.tools import fill_model_terms
+        opts = {"covs": ["a", "b"], "blocks": [[["a"]]]}
+        self.assertEqual(fill_model_terms(self.meta("covs", "blocks"), opts), [])
+        self.assertEqual(opts["blocks"], [[["a"]]])
+
+    def test_model_terms_full_factorial(self):
+        from jamovi_agent.tools import fill_model_terms
+        opts = {"factors": ["f1", "f2"], "covs": ["c"]}
+        fill_model_terms(self.meta("factors", "covs", "modelTerms"), opts)
+        self.assertEqual(opts["modelTerms"], [["f1"], ["f2"], ["f1", "f2"], ["c"]])
+
+
 class PromptTests(unittest.TestCase):
 
     def test_default_when_no_file(self):

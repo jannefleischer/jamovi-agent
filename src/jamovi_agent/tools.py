@@ -6,6 +6,7 @@ outputs are truncated so they fit into an LLM context.
 """
 from __future__ import annotations
 
+import itertools
 import os
 import re
 import statistics
@@ -106,6 +107,71 @@ def analysis_schema(meta) -> dict:
         if name and sch is not None:
             props[name] = sch
     return {"type": "object", "properties": props}
+
+
+# ----- model terms the jamovi UI fills in automatically ------------------------
+
+def _is_empty_terms(value) -> bool:
+    """True for missing/empty terms: None, [], [[]] (one empty block)."""
+    if value is None:
+        return True
+    if isinstance(value, list):
+        return all(_is_empty_terms(v) for v in value) if value and isinstance(value[0], list) else not value
+    return False
+
+
+def fill_model_terms(meta, options: dict) -> list[str]:
+    """Fill model terms from the variable lists, as jamovi's UI does.
+
+    In e.g. ``jmv::linReg`` the option ``covs`` only lists the available
+    predictors; the model itself is ``blocks``, which the UI fills when
+    variables are dropped in. Without it the analysis runs but every table
+    stays empty. Same for ``modelTerms`` (ANOVA/ANCOVA). Changes ``options``
+    in place and returns the names of the filled options.
+    """
+    names = {o.get("name") for o in meta.defn.get("options", [])}
+    factors = [v for v in options.get("factors") or [] if isinstance(v, str)]
+    covs = [v for v in options.get("covs") or [] if isinstance(v, str)]
+    filled = []
+    if "blocks" in names and _is_empty_terms(options.get("blocks")) and (factors or covs):
+        options["blocks"] = [[[v] for v in covs + factors]]
+        filled.append("blocks")
+    if "modelTerms" in names and _is_empty_terms(options.get("modelTerms")) and (factors or covs):
+        terms = []
+        for size in range(1, len(factors) + 1):  # full factorial of the factors
+            terms += [list(c) for c in itertools.combinations(factors, size)]
+        terms += [[c] for c in covs]  # main effects of covariates
+        options["modelTerms"] = terms
+        filled.append("modelTerms")
+    return filled
+
+
+def results_are_empty(results) -> bool:
+    """True if the results contain tables but not a single value."""
+    tables = []
+
+    def walk(elem):
+        kind = elem.WhichOneof("type")
+        if kind == "table":
+            tables.append(elem.table)
+        elif kind == "group":
+            for c in elem.group.elements:
+                walk(c)
+        elif kind == "array":
+            for c in elem.array.elements:
+                walk(c)
+
+    walk(results.results)
+    if not tables:
+        return False
+    for t in tables:
+        for col in t.columns:
+            for cell in col.cells:
+                kind = cell.WhichOneof("cellType")
+                if kind in ("i", "d") or (kind == "s" and cell.s.strip()):
+                    if col.name not in ("var", "term", "model", "name") and not col.name.startswith("."):
+                        return False
+    return True
 
 
 # ----- registry ---------------------------------------------------------------
@@ -310,9 +376,16 @@ class Toolbox:
                         "status": a.status.name.lower(), "options": opts})
         return out
 
-    async def _finish(self, inst, analysis) -> Any:
+    async def _finish(self, inst, analysis, filled: list[str] | None = None) -> Any:
         status = await self.b.wait_complete(analysis)
         out = {"analysis_id": analysis.id, "status": status.lower(), "results": ""}
+        if filled:
+            out["note"] = (f"filled {', '.join(filled)} from the variables, as the jamovi UI does; "
+                           "pass them explicitly for another model")
+        if analysis.results is not None and status == "COMPLETE" and results_are_empty(analysis.results):
+            out["warning"] = ("the analysis finished but its tables are empty: a required option is "
+                              "probably missing (e.g. the model terms such as blocks/modelTerms). "
+                              "Check get_analysis_schema; this is not a display problem.")
         if analysis.results is not None:
             out["results"] = _truncate(analysis_to_markdown(analysis.results))
             refs = references(analysis.results)
@@ -342,8 +415,9 @@ class Toolbox:
         missing = self._missing_variables(inst, meta, options)
         if missing:
             return {"error": f"no such variables: {missing}"}
+        filled = fill_model_terms(meta, options)
         analysis = self.b.create_analysis(inst, ns, name, options)
-        return await self._finish(inst, analysis)
+        return await self._finish(inst, analysis, filled)
 
     async def update_analysis(self, analysis_id: int, options: dict,
                               instance_id: str | None = None) -> Any:
@@ -352,8 +426,12 @@ class Toolbox:
         missing = self._missing_variables(inst, self.b.analysis_meta(current.ns, current.name), options)
         if missing:
             return {"error": f"no such variables: {missing}"}
+        merged = {**self.b.options_dict(current), **options}
+        filled = fill_model_terms(self.b.analysis_meta(current.ns, current.name), merged)
+        for name in filled:
+            options[name] = merged[name]
         analysis = self.b.update_analysis(inst, analysis_id, options)
-        return await self._finish(inst, analysis)
+        return await self._finish(inst, analysis, filled)
 
     async def get_results(self, analysis_id: int, instance_id: str | None = None) -> Any:
         inst = self.b.instance(instance_id)

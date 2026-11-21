@@ -147,6 +147,13 @@ async def main() -> int:
             ok &= check(r.status == 200 and "error" not in res, f"tool {tool}")
             print("   ", json.dumps(res, ensure_ascii=False)[:300])
 
+        # linReg with covs only: blocks must be filled like the UI does
+        async with http.post(f"{base}/agent/tools/create_analysis", json={
+                "ns": "jmv", "name": "linReg", "options": {"dep": "len", "covs": ["dose"]}}) as r:
+            res = await r.json()
+        ok &= check("dose" in res.get("results", "") and "warning" not in res
+                    and "blocks" in res.get("note", ""), "linReg with covs only gets blocks and results")
+
         # MCP endpoint (Streamable HTTP, JSON responses)
         mcp = f"{base}/agent/mcp"
         init = {"jsonrpc": "2.0", "id": 1, "method": "initialize",
