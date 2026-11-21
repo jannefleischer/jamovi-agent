@@ -129,7 +129,7 @@ async def main() -> int:
         async with http.post(mcp, json=init) as r:
             res = await r.json()
             sid = r.headers.get("Mcp-Session-Id", "")
-        ok &= check(res.get("result", {}).get("serverInfo", {}).get("name") == "jamovi-agent" and sid,
+        ok &= check(res.get("result", {}).get("serverInfo", {}).get("name") == "jamovi-agent" and bool(sid),
                     "mcp initialize")
         h = {"Mcp-Session-Id": sid}
         async with http.post(mcp, json={"jsonrpc": "2.0", "method": "notifications/initialized"},
