@@ -77,17 +77,32 @@ class Agent:
         self._locks: dict[str, asyncio.Lock] = {}
 
     def history(self, instance_id: str) -> list[dict]:
-        """User/assistant messages of an instance (tool traffic left out)."""
-        return [m for m in self._histories.get(instance_id, [])
-                if m["role"] in ("user", "assistant") and m.get("content")]
+        """User/assistant messages of an instance (tool traffic left out).
+
+        Assistant answers may carry ``thinking``: the model's reasoning of that
+        turn, for display and saving only (never sent back to the model).
+        """
+        out = []
+        for m in self._histories.get(instance_id, []):
+            if m["role"] in ("user", "assistant") and m.get("content"):
+                item = {"role": m["role"], "content": m["content"]}
+                if m.get("thinking"):
+                    item["thinking"] = m["thinking"]
+                out.append(item)
+        return out
 
     def has_history(self, instance_id: str) -> bool:
         return bool(self._histories.get(instance_id))
 
     def seed(self, instance_id: str, messages: list[dict]) -> None:
         """Start a conversation from saved user/assistant messages (e.g. from a .omv)."""
-        clean = [{"role": m["role"], "content": str(m["content"])} for m in messages
-                 if isinstance(m, dict) and m.get("role") in ("user", "assistant") and m.get("content")]
+        clean = []
+        for m in messages:
+            if isinstance(m, dict) and m.get("role") in ("user", "assistant") and m.get("content"):
+                item = {"role": m["role"], "content": str(m["content"])}
+                if m["role"] == "assistant" and m.get("thinking"):
+                    item["thinking"] = str(m["thinking"])
+                clean.append(item)
         self._histories[instance_id] = clean
 
     def reset(self, instance_id: str) -> None:
@@ -109,12 +124,15 @@ class Agent:
         usage = {"prompt_tokens": 0, "completion_tokens": 0}
         loop = asyncio.get_running_loop()
         deadline = loop.time() + self.timeout
+        turn_thinking: list[str] = []
 
         for step in range(1, self.max_steps + 1):
             if loop.time() > deadline:
                 yield {"type": "error", "message": "time limit reached"}
                 break
-            messages = [{"role": "system", "content": self.system_prompt()}] + history
+            # "thinking" is for the user only; the model never gets it back
+            messages = [{"role": "system", "content": self.system_prompt()}] + [
+                {k: v for k, v in m.items() if k != "thinking"} for m in history]
             try:
                 reply = await self.client.complete(messages, tools)
             except (LLMError, asyncio.TimeoutError, OSError) as e:
@@ -127,6 +145,7 @@ class Agent:
 
             thinking = split_thinking(reply)
             if thinking:
+                turn_thinking.append(thinking)
                 yield {"type": "thinking", "content": thinking}
 
             calls = reply.get("tool_calls") or []
@@ -136,6 +155,8 @@ class Agent:
             history.append(entry)
 
             if not calls:
+                if turn_thinking:
+                    entry["thinking"] = "\n\n".join(turn_thinking)
                 yield {"type": "message", "content": (reply.get("content") or "").strip()}
                 yield {"type": "done", "steps": step, "usage": usage}
                 return

@@ -207,7 +207,13 @@ class AgentTests(unittest.TestCase):
         thinking = [e for e in events if e["type"] == "thinking"]
         self.assertEqual(thinking[0]["content"], "field\n\ninline")
         self.assertEqual([e for e in events if e["type"] == "message"][0]["content"], "Antwort")
-        self.assertEqual(agent.history("i1")[-1]["content"], "Antwort")  # no reasoning saved
+        last = agent.history("i1")[-1]
+        self.assertEqual(last["content"], "Antwort")
+        self.assertEqual(last["thinking"], "field\n\ninline")  # kept for display/saving
+        # ... but never sent back to the model
+        client.replies.append({"content": "zwei"})
+        run(agent.run("i1", "y"))
+        self.assertTrue(all("thinking" not in m for m in client.requests[-1]))
 
     def test_step_limit(self):
         call = {"content": None, "tool_calls": [{"id": "c", "type": "function", "function": {

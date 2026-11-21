@@ -22,6 +22,7 @@
         resetTitle: 'Clear the conversation',
         thinking: 'Thinking …',
         reasoning: 'Reasoning',
+        processing: 'processing the results …',
         empty: 'For example: "Does X differ between the groups of Y?" '
              + 'Analyses the assistant runs appear in the results.',
         error: 'Error: ',
@@ -176,6 +177,12 @@
             return m;
         }
 
+        function reasoning(text) {
+            const d = el('details', 'jamovi-assistant-thinking');
+            d.append(el('summary', '', TEXT.reasoning), el('div', '', text));
+            return d;
+        }
+
         function showEmpty() {
             if (!log.children.length)
                 add('hint', undefined, TEXT.empty);
@@ -187,8 +194,11 @@
                 if (!r.ok) throw new Error(r.status);
                 const msgs = await r.json();
                 log.innerHTML = '';
-                for (const m of msgs)
+                for (const m of msgs) {
+                    if (m.thinking)
+                        log.append(reasoning(m.thinking));
                     add(m.role, m.role === 'assistant' ? markdown(m.content) : undefined, m.content);
+                }
             }
             catch (e) { /* no history yet */ }
             showEmpty();
@@ -214,11 +224,11 @@
                 }
                 for await (const ev of sse(r)) {
                     if (ev.type === 'thinking') {
-                        const d = el('details', 'jamovi-assistant-thinking');
-                        d.append(el('summary', '', TEXT.reasoning), el('div', '', ev.content));
-                        log.insertBefore(d, status);
+                        log.insertBefore(reasoning(ev.content), status);
                         log.scrollTop = log.scrollHeight;
                     }
+                    else if (ev.type === 'tool_result')
+                        status.textContent = '… ' + TEXT.processing;
                     else if (ev.type === 'tool_call')
                         status.textContent = '… ' + (TEXT.tools[ev.name] || ev.name);
                     else if (ev.type === 'message')
