@@ -33,7 +33,7 @@ first (search_docs, read_doc, explain_analysis) and name the source. Not \
 needed for plain "run this" requests.
 7. If the request is unclear or the data do not fit, say so and ask.
 
-Answer in the language of the user (default German). Be concise; use short \
+Answer in the language of the user (default English). Be concise; use short \
 Markdown with tables only where they help.
 
 Installed modules: {{modules}}

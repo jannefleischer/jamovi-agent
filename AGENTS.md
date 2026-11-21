@@ -61,7 +61,7 @@ by the agent at `agent/static/`, and the same API (`history`, `chat` as SSE,
 `reset`).
 
 1. **Module (default, `JAMOVI_AGENT_UI=module`)** – the user adds the analysis
-   *KI-Assistent* (module `jamoviassistant`, analysis `assistant`). Its Html
+   *Assistant* (module `jamoviassistant`, analysis `assistant`). Its Html
    result loads `inst/loader.js` (served by jamovi from `R/jamoviassistant/`),
    which loads the widget from `../../../agent/` (results frame:
    `<root>/r/<instance>/<analysis>/`). The conversation is written by the
@@ -144,6 +144,7 @@ does not reliably restart a killed jamovi); run `smoke.py` with
 
 ## Conventions
 
-- Code, comments, docstrings, commit messages: English. UI texts: German for now
-  (`TEXT` in `chat.js`, module titles); keep them in one place.
+- Everything in English: code, comments, docstrings, commit messages, UI texts
+  (`TEXT` in `chat.js`, sidebar, module titles and labels). Deployments can
+  answer in another language through their system prompt.
 - Commit subjects short and imperative; one topic per commit.

@@ -1,8 +1,8 @@
-title: KI-Assistent
+title: Assistant
 name: assistant
 jus: '3.0'
 stage: 0
 compilerMode: tame
 children:
   - type: Label
-    label: Der Chat erscheint rechts im Ergebnisbereich. Der Verlauf wird mit der Datei gespeichert.
+    label: The chat appears in the results on the right. The conversation is saved with the file.

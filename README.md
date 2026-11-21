@@ -81,7 +81,7 @@ All paths are relative to the jamovi root (behind JupyterHub:
 Two variants, chosen with `JAMOVI_AGENT_UI` (details in `AGENTS.md`):
 
 - `module` (default): the jamovi module **jamovi-assistant** (`module/jamoviassistant`)
-  adds the analysis *KI-Assistent*; the chat sits in the results panel and the
+  adds the analysis *Assistant*; the chat sits in the results panel and the
   conversation is saved with the `.omv` file.
 - `sidebar`: a chat panel next to the jamovi window (button bottom right); the
   conversation is kept in memory only.

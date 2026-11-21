@@ -13,12 +13,12 @@ description: >-
   this window and explains the results. Needs the jamovi_agent server extension
   and an OpenAI-compatible endpoint. The conversation is saved with the file.
 analyses:
-  - title: KI-Assistent
+  - title: Assistant
     name: assistant
     ns: jamoviassistant
-    menuGroup: KI-Assistent
-    menuTitle: KI-Assistent (Chat)
-    menuSubtitle: Fragen zu Daten und Statistik
+    menuGroup: Assistant
+    menuTitle: Assistant (chat)
+    menuSubtitle: Questions about data and statistics
     description: >-
       A chat with the jamovi-assistant in the results panel. The assistant
       can run analyses in this window; the conversation is saved with the file.

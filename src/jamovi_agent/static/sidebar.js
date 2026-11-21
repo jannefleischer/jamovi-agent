@@ -43,15 +43,15 @@
         panel.id = 'jamovi-assistant-sidebar';
         const toggle = document.createElement('button');
         toggle.id = 'jamovi-assistant-toggle';
-        toggle.textContent = 'KI-Assistent';
+        toggle.textContent = 'Assistant';
         document.body.append(panel, toggle);
 
         let mounted = false;
         toggle.addEventListener('click', () => {
             panel.classList.toggle('open');
-            toggle.textContent = panel.classList.contains('open') ? 'Schließen' : 'KI-Assistent';
+            toggle.textContent = panel.classList.contains('open') ? 'Close' : 'Assistant';
             if (!mounted) {
-                window.JamoviAssistant.mount(panel, { base, instanceId, title: 'KI-Assistent' });
+                window.JamoviAssistant.mount(panel, { base, instanceId, title: 'jamovi-assistant' });
                 mounted = true;
             }
         });

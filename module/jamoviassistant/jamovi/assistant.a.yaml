@@ -1,7 +1,7 @@
 ---
 name: assistant
-title: KI-Assistent
-menuGroup: KI-Assistent
+title: Assistant
+menuGroup: Assistant
 version: '0.1.0'
 jas: '1.2'
 
