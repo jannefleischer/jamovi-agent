@@ -79,7 +79,9 @@ def table_to_markdown(table, title: str = "") -> str:
     if not cols:
         return ""
     n_rows = max((len(c.cells) for c in cols), default=0)
-    header = [((c.superTitle + " ") if c.superTitle else "") + (c.title or c.name) for c in cols]
+    # columns without a title are row labels (e.g. ".name[r]"): no header text
+    header = [((c.superTitle + " ") if c.superTitle else "") + (c.title or ("" if c.name.startswith(".") else c.name))
+              for c in cols]
     header = [h.strip() for h in header]
     body = [[format_cell(c.cells[r], c.format) if r < len(c.cells) else "" for c in cols]
             for r in range(n_rows)]
