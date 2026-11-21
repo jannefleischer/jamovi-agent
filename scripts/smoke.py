@@ -63,6 +63,25 @@ class FakeBrowser:
                 if resp.name != "empty":
                     self.analyses[resp.analysisId] = resp
 
+    async def create_analysis(self, analysis_id: int, ns: str, name: str) -> None:
+        """Create an analysis the way the client does (even id, from the menu)."""
+        req = jcoms.AnalysisRequest(instanceId=self.instance_id, analysisId=analysis_id,
+                                    name=name, ns=ns, index=1)
+        req.options.hasNames = True
+        msg = jcoms.ComsMessage(id=100 + analysis_id, instanceId=self.instance_id,
+                                payload=req.SerializeToString(), payloadType="AnalysisRequest")
+        await self._ws.send_bytes(msg.SerializeToString())
+
+    def option(self, analysis_id: int, name: str):
+        resp = self.analyses.get(analysis_id)
+        if resp is None:
+            return None
+        opts = resp.options
+        for i, n in enumerate(opts.names):
+            if n == name:
+                return opts.options[i].s
+        return None
+
     async def close(self) -> None:
         if self._ws is not None:
             await self._ws.close()
@@ -85,7 +104,14 @@ async def main() -> int:
 
     async with aiohttp.ClientSession(headers=headers) as http:
         async with http.get(f"{base}/agent/health") as r:
+            health = await r.json()
             ok &= check(r.status == 200, f"agent/health -> {r.status}")
+        ok &= check(health.get("ui") in ("module", "sidebar", "both", "off"), f"ui mode: {health.get('ui')}")
+        for name in ("chat.js", "chat.css", "sidebar.js"):
+            async with http.get(f"{base}/agent/static/{name}") as r:
+                ok &= check(r.status == 200 and len(await r.read()) > 500, f"static {name}")
+        async with http.get(f"{base}/agent/static/../web.py") as r:
+            ok &= check(r.status == 404, "static whitelist")
 
         browser = FakeBrowser(http, base)
         await browser.open(DATA)
@@ -145,12 +171,25 @@ async def main() -> int:
                     "mcp tools/call search_analyses finds Mann-Whitney via ttestIS")
 
         if args.chat:
+            # jamovi-assistant module: the conversation goes into its hidden option
+            await browser.create_analysis(2, "jamoviassistant", "assistant")
+            await asyncio.sleep(2.0)
+            ok &= check(2 in browser.analyses, "assistant analysis created (module installed)")
             async with http.post(f"{base}/agent/chat", json={"message": args.chat}) as r:
                 async for line in r.content:
                     line = line.decode().strip()
                     if line.startswith("data:"):
                         print("   ", line[:400])
             ok &= check(len(browser.analyses) >= 1, "chat run finished")
+            await asyncio.sleep(2.0)
+            saved = browser.option(2, "chat") or ""
+            ok &= check(args.chat[:20] in saved, "conversation saved in the assistant analysis (.omv)")
+            async with http.get(f"{base}/agent/tools/list_session_analyses") as r:
+                pass
+            async with http.post(f"{base}/agent/tools/list_session_analyses", json={}) as r:
+                listed = await r.json()
+            ok &= check(all(a["ns"] != "jamoviassistant" for a in listed),
+                        "assistant analysis hidden from the agent's analysis list")
 
         await browser.close()
     return 0 if ok else 1
