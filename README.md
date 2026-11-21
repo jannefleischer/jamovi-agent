@@ -62,7 +62,8 @@ All paths are relative to the jamovi root (behind JupyterHub:
 
 | Variable | Default | Meaning |
 |---|---|---|
-| `JAMOVI_AGENT_ENABLED` | `true` | `false` mounts only `agent/health` |
+| `JAMOVI_AGENT_ENABLED` | `true` | `false` mounts only `agent/health` and `agent/static/*` |
+| `JAMOVI_AGENT_UI` | `module` | chat UI: `module`, `sidebar`, `both`, `off` |
 | `OPENAI_BASE_URL` | – | e.g. `https://litellm.example/v1` |
 | `OPENAI_API_KEY` | – | key for the endpoint |
 | `JAMOVI_AGENT_MODEL` | `gpt-4o-mini` | model name at the endpoint |
@@ -74,6 +75,17 @@ All paths are relative to the jamovi root (behind JupyterHub:
 | `JAMOVI_AGENT_DOCS` | `/opt/jamovi-agent/docs` | documentation directory (Markdown) |
 | `JAMOVI_AGENT_PROMPT_FILE` | – | system prompt file; default `<docs>/system-prompt.md`, then built-in |
 | `JAMOVI_AGENT_USER_AGENT` | `jamovi-assistant` | User-Agent sent to the endpoint |
+
+## Chat UI
+
+Two variants, chosen with `JAMOVI_AGENT_UI` (details in `AGENTS.md`):
+
+- `module` (default): the jamovi module **jamovi-assistant** (`module/jamoviassistant`)
+  adds the analysis *KI-Assistent*; the chat sits in the results panel and the
+  conversation is saved with the `.omv` file.
+- `sidebar`: a chat panel next to the jamovi window (button bottom right); the
+  conversation is kept in memory only.
+- `both`, `off`.
 
 ## Documentation and system prompt
 
