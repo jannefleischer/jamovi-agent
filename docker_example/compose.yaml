@@ -1,0 +1,23 @@
+# jamovi with jamovi-agent on http://localhost:41337/jamovi/
+# Set the LLM endpoint in docker_example/.env (see .env.example).
+services:
+  jamovi:
+    build:
+      context: ..
+      dockerfile: docker_example/Dockerfile
+    image: jamovi-agent-example
+    ports:
+      - "127.0.0.1:41337:41337"
+    env_file: .env
+    environment:
+      # path mode: the chat in the results (<root>/r/...) reaches the agent
+      # at <root>/agent/ on the same origin
+      JAMOVI_HOST_A: "localhost:41337/jamovi"
+      JAMOVI_HOST_B: "localhost:41337/jamovi/a"
+      JAMOVI_HOST_C: "localhost:41337/jamovi/r"
+      JAMOVI_AGENT_UI: module
+      # no access key: only for local use (the port is bound to 127.0.0.1).
+      # Remove this line to get jamovi's random key (printed in the log).
+      JAMOVI_ACCESS_KEY: ""
+    volumes:
+      - ./docs:/opt/jamovi-agent/docs:ro
